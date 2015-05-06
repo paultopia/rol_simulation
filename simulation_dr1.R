@@ -397,3 +397,12 @@ testruns <- function(runs) {
   }
   return(results)
 }
+
+
+# quickie function to get all the CSVs back
+itsAlive <- function(filenames) {
+  biglist <- lapply(filenames, read.csv)   # should work with vector of character strings
+  library(plyr)
+  bigdf <- rbind.fill(biglist)
+  return(bigdf)
+}
