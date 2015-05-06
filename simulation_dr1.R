@@ -245,6 +245,10 @@ bribe.fracmatrix.make <- function(numgroups){
   betterbribes <- allbribes[rowSums(allbribes) < 1, ]
   bestbribes <- betterbribes[rowSums(betterbribes) > 0,]
   return(bestbribes)
+  # this is truly ugly and needs work: 
+  # 1. maybe use do.call rather than this perverse args.topass stuff?
+  # 2. maybe just superassign this sucker to the global environment for numgroups 1:5 then grab whichever 
+  # I need rather than having each iteration compute the same bloody thing?
 }
 
 
