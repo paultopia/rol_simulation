@@ -12,6 +12,11 @@
 # results of 1000 runs, one per row. 
 # also saves a list of file names, and returns that list for post-processing.
 
+# QUESTION: I'm generating a lot of groupwise stuff using tapply (e.g. groupwise power means, groupwise goods means)
+# am I sure that R will preserve the numerical ordering of groups in the ultimate vector?  
+# I'm PRETTY sure it will: tapply coerces factors, and as.factor doc says it preserves order treated as character.  
+# SURELY numbers when treated as characters preserve their natural order.
+
 simulate.ch9 <- function(runs) {
   # library(compiler)
   # enableJIT(3)
@@ -20,12 +25,12 @@ simulate.ch9 <- function(runs) {
   by1k <- round(runs/1000) + 1
   output.fnames <- vector(mode = "character", length = by1k)
   for (j in 1:by1k) {
-    results <- data.frame(matrix(NA, nrow=1000, ncol=23))
+    results <- data.frame(matrix(NA, nrow=1000, ncol=24))
     colnames(results) <- c("run.id", "goods.mean.elite", "goods.mean.mass", "goods.sd.mass", "goods.gini.mass", 
                            "goods.gini.all", "power.mean.elite", "power.mean.mass", "power.sd.mass", "power.gini.mass", 
                            "power.gini.all", "num.subgroups", "subgroups.max.members", "subgroups.min.members", 
                            "subgroup.mean.members", "groupwise.goods.gini", "groupwise.power.gini", 
-                           "trust", "commitment", "penalty", "errorvar", "decay", "rounds")
+                           "trust", "commitment", "penalty", "errorvar", "decay", "power.decay", "rounds")
     for (i in 1:1000) {
       run.res <- c(i,outer.wrapper())
       results[i,] <- run.res
@@ -69,8 +74,10 @@ outer.wrapper <- function() {
   penalty.v <- runif(1, 0.5, 5)
   errorvar.v <- runif(1, 0.01, 0.2)
   decay.v <- sample(c(0, .01), 1)
+  power.decay.v <- sample(c(0, .01, .05, .1), 1)
   iniparams <- list(goods = goods.v, power = power.v, numgroups = subgroups.num, groupassgs = subgroups.dist, 
-                    trust = trust.v, commitment = commitment.v, penalty = penalty.v, errorvar =  errorvar.v, decay = decay.v)
+                    trust = trust.v, commitment = commitment.v, penalty = penalty.v, errorvar =  errorvar.v, 
+                    decay = decay.v, power.decay = power.decay.v)
   one.run <- inner.wrapper(iniparams)
   return(one.run)
 }
@@ -168,7 +175,7 @@ inner.wrapper <- function(iniparams) {
                goods.gini.all, power.mean.elite, power.mean.mass, power.sd.mass, power.gini.mass, 
                power.gini.all, iniparams$numgroups, subgroups.max.members, subgroups.min.members, 
                subgroup.mean.members, groupwise.goods.gini, groupwise.power.gini, iniparams$trust, 
-               iniparams$commitment, iniparams$penalty, iniparams$errorvar, iniparams$decay, rounds)  
+               iniparams$commitment, iniparams$penalty, iniparams$errorvar, iniparams$decay, iniparams$power.decay, rounds)  
   return(results)
 }
 
@@ -185,6 +192,7 @@ inner.wrapper <- function(iniparams) {
 run.simul <- function(iniparams, bribe.fracmatrix) {
   iniparams$working.trust <- iniparams$trust
   iniparams$working.power <- iniparams$power
+  iniparams$groupwise.goods.means <- tapply(iniparams$goods[101:1100], iniparams$groupassgs[101:1100], mean)
   for (i in 1:1000) {
     num.rounds <- i
     iniparams$groupwise.powersum <- tapply(iniparams$working.power, iniparams$groupassgs, sum)
@@ -203,6 +211,7 @@ run.simul <- function(iniparams, bribe.fracmatrix) {
     # not sure if this will work scope-wise.  honestly kind of tempted to just set trust and power in global environment.
     
     iniparams$working.trust <- update.trust(iniparams, elite.act, mass.acts)
+    iniparams$working.power <- decay.power(iniparams) 
     iniparams$working.power <- update.power(iniparams) 
   }
   return(num.rounds)
@@ -225,7 +234,7 @@ evaluate.elite() <- function (iniparams, bribe.fracmatrix) {
   bestbribe <- maximize.bribe(iniparams, trust.estimate, commitment.estimate, bribe.fracmatrix)
   # best bribe will be a vector of length num.subgroups + 1 with the utility for best bribe 
   # in first spot and the bribes for each group (total) in remaining spots.
-  nonelite.power.proportion <- sum(iniparams$working.power[101:1100])/10000
+  nonelite.power.proportion <- sum(iniparams$working.power[101:1100])/sum(iniparams$working.power)
   topple.util <- calc.topple.util(iniparams, trust.estimate)
   options <- c(status.quo.util, topple.util, bestbribe[1])
   choice <- which.max(options)
@@ -272,7 +281,7 @@ maximize.bribe <- function(iniparams, trust.estimate, commitment.estimate, bribe
 calc.topple.util <- function(iniparams, trust.estimate) {
   # maximum pay is 100, i.e., one elite share of total goods.  hard-coding this now, but may generalize later 
   # so as to vary that specification, depending on time
-  mass.power.share <- sum(iniparams$working.power[101:11000]) / 10000
+  mass.power.share <- sum(iniparams$working.power[101:11000]) / sum(iniparams$working.power)
   probwin <- 1 - (trust.estimate * mass.power.share)
   topple.util <- 100 * probwin
   return(topple.util)
@@ -324,7 +333,7 @@ evaluate.outcome <- function(elite.act, mass.act, working.power) {
   if(elite.act[1] == 1) {  # don't overthrow
     outcome <- 1
   } else {
-    prob.mass.win <- mass.act[2] / 10000
+    prob.mass.win <- mass.act[2] / sum(working.power)
     dieroll <- runif(1)
     outcome <- ifelse(dieroll >= prob.mass.win, 1, 0)
   }
@@ -358,12 +367,24 @@ update.trust <- function(iniparams, elite.act, mass.acts) {
 update.power <- function(iniparams) {
   choices <- sample(0:iniparams$numgroups, 2, replace=FALSE)  
   proportion <- min(abs(rnorm(1, 0, 0.2)), 1)
-  power <- iniparams$power.working 
+  power <- iniparams$working.power 
   gimme <- sum(power[iniparams$groupassgs == choices[1]] * proportion)
   power[iniparams$groupassgs == choices[1]] <- power[iniparams$groupassgs == choices[1]] - power[iniparams$groupassgs == choices[1]] * proportion
   power[iniparams$groupassgs == choices[2]] <- power[iniparams$groupassgs == choices[2]] + gimme / length(power[iniparams$groupassgs == choices[2]])
   return(power)
+}
 
+decay.power <- function(iniparams) {
+  power <- iniparams$working.power 
+  mean.grpgd <- mean(iniparams$groupwise.goods.means)
+  sd.grpgd <- sd(iniparams$groupwise.goods.means)
+  testcond <- mean.grpgd - (1.5 * sd.grpgd)
+  for (i in 1:iniparams$numgroups) {
+    if(iniparams$groupwise.goods.means[i] < testcond) {
+      power[iniparams$groupassgs == i] <- power[iniparams$groupassgs == i] - (power[iniparams$groupassgs == i] * iniparams$power.decay)
+    }
+  }
+  return(power)
 }
 
 # written to be applied to each row of possible bribes matrix, calculate utility and 
@@ -401,7 +422,6 @@ testruns <- function(runs) {
   }
   return(results)
 }
-
 
 # quickie function to get all the CSVs back
 itsAlive <- function(filenames) {
