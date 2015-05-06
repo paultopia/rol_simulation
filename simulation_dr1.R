@@ -384,8 +384,9 @@ generalized.bribe.sigmasum <- function(bribes, inipar) {
   return(bigsum)
 }
 
-# ditto another mass/elite shared calc --- BUT what is behavior when all groups get nonzero bribe? 
-generalized.nobribe.powersum <- function(bribes, inipar) sum(inipar$groupwise.powersum[bribes == 0]) 
+# ditto another mass/elite shared calc 
+# weird ifelse is for paranoia abt behavior when all groups get nonzero bribe---I want 0 not NA or NULL or some shit 
+generalized.nobribe.powersum <- function(bribes, inipar) ifelse(all(bribes != 0), 0, sum(inipar$groupwise.powersum[bribes == 0]))
 
 
 # function to test the whole thing without spitting out a bunch of CSVs etc.
