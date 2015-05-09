@@ -15,7 +15,7 @@
 # QUESTION: I'm generating a lot of groupwise stuff using tapply (e.g. groupwise power means, groupwise goods means)
 # am I sure that R will preserve the numerical ordering of groups in the ultimate vector?  
 # I'm PRETTY sure it will: tapply coerces factors, and as.factor doc says it preserves order treated as character.  
-# SURELY numbers when treated as characters preserve their natural order.
+# SURELY numbers when treated as characters preserve their natural order.   at least to first digit.
 
 simulate.ch9 <- function(runs) {
   # library(compiler)
@@ -25,12 +25,13 @@ simulate.ch9 <- function(runs) {
   by1k <- round(runs/1000) + 1
   output.fnames <- vector(mode = "character", length = by1k)
   for (j in 1:by1k) {
-    results <- data.frame(matrix(NA, nrow=1000, ncol=24))
+    results <- data.frame(matrix(NA, nrow=1000, ncol=26))
     colnames(results) <- c("run.id", "goods.mean.elite", "goods.mean.mass", "goods.sd.mass", "goods.gini.mass", 
                            "goods.gini.all", "power.mean.elite", "power.mean.mass", "power.sd.mass", "power.gini.mass", 
                            "power.gini.all", "num.subgroups", "subgroups.max.members", "subgroups.min.members", 
                            "subgroup.mean.members", "groupwise.goods.gini", "groupwise.power.gini", 
-                           "trust", "commitment", "penalty", "errorvar", "decay", "power.decay", "rounds")
+                           "trust", "commitment", "penalty", "errorvar", "decay", "power.decay", "rounds", 
+                           "attempts", "ending.trust")
     for (i in 1:1000) {
       run.res <- c(i,outer.wrapper())
       results[i,] <- run.res
@@ -168,14 +169,18 @@ inner.wrapper <- function(iniparams) {
   
   
   # now go actually run the simulation and get number of rounds
-  rounds <- run.simul(iniparams, bribe.fracmatrix)
+  outcome <- run.simul(iniparams, bribe.fracmatrix)  # now produces 3-item vector with rounds, number of coup attempts, and ending trust
+  rounds <- outcome[1]
+  attempts <- outcome[2]
+  ending.trust <- outcome[3]
   
   # then take everything and give it back to the outer wrapper in the right order to go out to the concatenator
   results <- c(goods.mean.elite, goods.mean.mass, goods.sd.mass, goods.gini.mass, 
                goods.gini.all, power.mean.elite, power.mean.mass, power.sd.mass, power.gini.mass, 
                power.gini.all, iniparams$numgroups, subgroups.max.members, subgroups.min.members, 
                subgroup.mean.members, groupwise.goods.gini, groupwise.power.gini, iniparams$trust, 
-               iniparams$commitment, iniparams$penalty, iniparams$errorvar, iniparams$decay, iniparams$power.decay, rounds)  
+               iniparams$commitment, iniparams$penalty, iniparams$errorvar, iniparams$decay, iniparams$power.decay, 
+               rounds, attempts, ending.trust)  
   return(results)
 }
 
@@ -193,12 +198,14 @@ run.simul <- function(iniparams, bribe.fracmatrix) {
   iniparams$working.trust <- iniparams$trust
   iniparams$working.power <- iniparams$power
   iniparams$groupwise.goods.means <- tapply(iniparams$goods[101:1100], iniparams$groupassgs[101:1100], mean)
+  attempts <- 0
   for (i in 1:1000) {
     num.rounds <- i
     iniparams$groupwise.powersum <- tapply(iniparams$working.power, iniparams$groupassgs, sum)
     elite.act <- evaluate.elite(iniparams, bribe.fracmatrix)
     # elite.act should be a vector with first item indicating first 1, 2, or 3 for status quo, overthrow w/o bribe, 
     # or overthrow w/ bribe, then remainder of items is one slot for each groups indicating bribe or not. 
+    attempts <- ifelse(elite.act[1] == 1, attempts, attempts + 1)
     mass.acts <- evaluate.masses(iniparams, elite.act)
     # mass.acts should be a two-item vector w/ number of resisters and total power of resisters.
     round.outcome <- evaluate.outcome(elite.act, mass.act, iniparams$working.power) 
@@ -214,7 +221,9 @@ run.simul <- function(iniparams, bribe.fracmatrix) {
     iniparams$working.power <- decay.power(iniparams) 
     iniparams$working.power <- update.power(iniparams) 
   }
-  return(num.rounds)
+  
+  outcome <- c(num.rounds, attempts, iniparams$working.trust)
+  return(outcome)
 }
 
 # EVERY FUNCTION AFTER THIS RUNS EVERY ROUND, CONTRIBUTES TO THE EVALUATION OF A SINGLE ROUND.
