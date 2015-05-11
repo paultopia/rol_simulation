@@ -162,8 +162,8 @@ inner.wrapper <- function(iniparams) {
   subgroups.max.members <- max(table(iniparams$groupassgs[iniparams$groupassgs > 0]))
   subgroups.min.members <- min(table(iniparams$groupassgs[iniparams$groupassgs > 0]))
   subgroups.mean.members <- mean(table(iniparams$groupassgs[iniparams$groupassgs > 0]))
-  groupwise.goods.gini <- Gini(tapply(iniparams$goods, iniparams$groupassgs[iniparams$groupassgs > 0], mean))
-  groupwise.power.gini <- Gini(tapply(iniparams$power, iniparams$groupassgs[iniparams$groupassgs > 0], mean))
+  groupwise.goods.gini <- Gini(tapply(iniparams$goods[101:1100], iniparams$groupassgs[iniparams$groupassgs > 0], mean))
+  groupwise.power.gini <- Gini(tapply(iniparams$power[101:1100], iniparams$groupassgs[iniparams$groupassgs > 0], mean))
   
   # I'm going to need this later and do not want to have to calculate it every round
   bribe.fracmatrix <- bribe.fracmatrix.make(iniparams$numgroups)
@@ -426,6 +426,7 @@ generalized.nobribe.powersum <- function(bribes, inipar) ifelse(all(bribes != 0)
 
 # function to test the whole thing without spitting out a bunch of CSVs etc.
 testruns <- function(runs) {
+  library(ineq)  # for later
   results <- rep(1, times = runs)
   for (i in 1:runs) {
     results[i] <- outer.wrapper()
