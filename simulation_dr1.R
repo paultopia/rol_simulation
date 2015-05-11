@@ -134,7 +134,7 @@ dist.power <- function() {
 
 # assigns each member of the mass to a group, and assigns each member of elite to group 0 (no group)
 # returns a vector of length 1100 with group assignments
-# calls nothing, called by run.wrapper()
+# calls nothing, called by outer.wrapper()
 
 dist.groups <- function(groupnum) {
   
