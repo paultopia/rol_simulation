@@ -237,7 +237,7 @@ run.simul <- function(iniparams, bribe.fracmatrix) {
 # decisions are 1: status quo, no bribes, 2: overthrow w/ no bribe, 3: pay some bribes then overthrow.  
 # rest of vector elements are amount of bribe for each group. 
 
-evaluate.elite() <- function(iniparams, bribe.fracmatrix) {
+evaluate.elite <- function(iniparams, bribe.fracmatrix) {
   trust.estimate <- min(max(iniparams$working.trust + rnorm(1, 0, iniparams$errorvar), 0) ,1)
   commitment.estimate <- min(max(iniparams$commitment + rnorm(1, 0, iniparams$errorvar), 0) ,1)
   status.quo.util <- iniparams$goods[1]
