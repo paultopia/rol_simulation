@@ -258,21 +258,16 @@ evaluate.elite <- function(iniparams, bribe.fracmatrix) {
 bribe.fracmatrix.make <- function(numgroups){
   
   to.combine <- seq(from = 0, to = .95, by = .05)
-  if(numgroups == 1) {
-    bestbribes <- to.combine
-  } else {
-    args.topass <- rep("to.combine", numgroups)
-    allbribes <- expand.grid(mget(args.topass))
-    betterbribes <- allbribes[rowSums(allbribes) < 1, ]
-    bestbribes <- betterbribes[rowSums(betterbribes) > 0,]
-  }
   
+  args.topass <- rep("to.combine", numgroups)
+  allbribes <- expand.grid(mget(args.topass))
+  betterbribes <- allbribes[rowSums(allbribes) < 1, ]
+  bestbribes <- betterbribes[rowSums(betterbribes) > 0,]
   return(bestbribes)
   # this is truly ugly and needs work: 
   # 1. maybe use do.call rather than this perverse args.topass stuff?
   # 2. maybe just superassign this sucker to the global environment for numgroups 1:5 then grab whichever 
   # I need rather than having each iteration compute the same bloody thing?
-  # 3. maybe just don't care?
 }
 
 
@@ -432,9 +427,15 @@ generalized.nobribe.powersum <- function(bribes, inipar) ifelse(all(bribes != 0)
 # function to test the whole thing without spitting out a bunch of CSVs etc.
 testruns <- function(runs) {
   library(ineq)  # for later
-  results <- rep(1, times = runs)
+  results <- data.frame(matrix(NA, nrow=runs, ncol=26))
+  colnames(results) <- c("goods.mean.elite", "goods.mean.mass", "goods.sd.mass", "goods.gini.mass", 
+                         "goods.gini.all", "power.mean.elite", "power.mean.mass", "power.sd.mass", "power.gini.mass", 
+                         "power.gini.all", "num.subgroups", "subgroups.max.members", "subgroups.min.members", 
+                         "subgroup.mean.members", "groupwise.goods.gini", "groupwise.power.gini", 
+                         "trust", "commitment", "penalty", "errorvar", "decay", "power.decay", "shockvar", "rounds", 
+                         "attempts", "ending.trust")
   for (i in 1:runs) {
-    results[i] <- outer.wrapper()
+    results[i,] <- outer.wrapper()
   }
   return(results)
 }
