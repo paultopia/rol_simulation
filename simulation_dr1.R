@@ -68,7 +68,7 @@ outer.wrapper <- function() {
   goods.v <- dist.goods()
   power.v <- dist.power()
   # goods and power are both going to be vectors of length 1,100 to be matched by indexing to citizens, where elites are first 100
-  subgroups.num <- sample(1:5, 1)
+  subgroups.num <- sample(2:5, 1)
   subgroups.dist <- dist.groups(subgroups.num)
   trust.v <- runif(1, .1, .9)
   commitment.v <- runif(1, 0, 1)
@@ -258,16 +258,21 @@ evaluate.elite <- function(iniparams, bribe.fracmatrix) {
 bribe.fracmatrix.make <- function(numgroups){
   
   to.combine <- seq(from = 0, to = .95, by = .05)
+  if(numgroups == 1) {
+    bestbribes <- to.combine
+  } else {
+    args.topass <- rep("to.combine", numgroups)
+    allbribes <- expand.grid(mget(args.topass))
+    betterbribes <- allbribes[rowSums(allbribes) < 1, ]
+    bestbribes <- betterbribes[rowSums(betterbribes) > 0,]
+  }
   
-  args.topass <- rep("to.combine", numgroups)
-  allbribes <- expand.grid(mget(args.topass))
-  betterbribes <- allbribes[rowSums(allbribes) < 1, ]
-  bestbribes <- betterbribes[rowSums(betterbribes) > 0,]
   return(bestbribes)
   # this is truly ugly and needs work: 
   # 1. maybe use do.call rather than this perverse args.topass stuff?
   # 2. maybe just superassign this sucker to the global environment for numgroups 1:5 then grab whichever 
   # I need rather than having each iteration compute the same bloody thing?
+  # 3. maybe just don't care?
 }
 
 
