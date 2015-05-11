@@ -181,7 +181,7 @@ inner.wrapper <- function(iniparams) {
                power.gini.all, iniparams$numgroups, subgroups.max.members, subgroups.min.members, 
                subgroups.mean.members, groupwise.goods.gini, groupwise.power.gini, iniparams$trust, 
                iniparams$commitment, iniparams$penalty, iniparams$errorvar, iniparams$decay, iniparams$power.decay, 
-               rounds, attempts, ending.trust)  
+               iniparams$shockvar, rounds, attempts, ending.trust)  
   return(results)
 }
 
