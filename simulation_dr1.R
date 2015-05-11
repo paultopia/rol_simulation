@@ -25,12 +25,12 @@ simulate.ch9 <- function(runs) {
   by1k <- round(runs/1000) + 1
   output.fnames <- vector(mode = "character", length = by1k)
   for (j in 1:by1k) {
-    results <- data.frame(matrix(NA, nrow=1000, ncol=26))
+    results <- data.frame(matrix(NA, nrow=1000, ncol=27))
     colnames(results) <- c("run.id", "goods.mean.elite", "goods.mean.mass", "goods.sd.mass", "goods.gini.mass", 
                            "goods.gini.all", "power.mean.elite", "power.mean.mass", "power.sd.mass", "power.gini.mass", 
                            "power.gini.all", "num.subgroups", "subgroups.max.members", "subgroups.min.members", 
                            "subgroup.mean.members", "groupwise.goods.gini", "groupwise.power.gini", 
-                           "trust", "commitment", "penalty", "errorvar", "decay", "power.decay", "rounds", 
+                           "trust", "commitment", "penalty", "errorvar", "decay", "power.decay", "shockvar", "rounds", 
                            "attempts", "ending.trust")
     for (i in 1:1000) {
       run.res <- c(i,outer.wrapper())
@@ -70,15 +70,16 @@ outer.wrapper <- function() {
   # goods and power are both going to be vectors of length 1,100 to be matched by indexing to citizens, where elites are first 100
   subgroups.num <- sample(1:5, 1)
   subgroups.dist <- dist.groups(subgroups.num)
-  trust.v <- runif(1, 0.1, 0.9)
+  trust.v <- runif(1, .1, .9)
   commitment.v <- runif(1, 0, 1)
-  penalty.v <- runif(1, 0.5, 5)
-  errorvar.v <- runif(1, 0.01, 0.2)
+  penalty.v <- runif(1, .5, 5)
+  errorvar.v <- runif(1, .01, .2)
   decay.v <- sample(c(0, .01), 1)
   power.decay.v <- sample(c(0, .01, .05, .1), 1)
+  shockvar.v <- runif(1, .05, .6)
   iniparams <- list(goods = goods.v, power = power.v, numgroups = subgroups.num, groupassgs = subgroups.dist, 
                     trust = trust.v, commitment = commitment.v, penalty = penalty.v, errorvar =  errorvar.v, 
-                    decay = decay.v, power.decay = power.decay.v)
+                    decay = decay.v, power.decay = power.decay.v, shockvar = shockvar.v)
   one.run <- inner.wrapper(iniparams)
   return(one.run)
 }
@@ -375,7 +376,7 @@ update.trust <- function(iniparams, elite.act, mass.acts) {
 
 update.power <- function(iniparams) {
   choices <- sample(0:iniparams$numgroups, 2, replace=FALSE)  
-  proportion <- min(abs(rnorm(1, 0, 0.2)), 1)
+  proportion <- min(abs(rnorm(1, 0, iniparams$shockvar)), 1)
   power <- iniparams$working.power 
   gimme <- sum(power[iniparams$groupassgs == choices[1]] * proportion)
   power[iniparams$groupassgs == choices[1]] <- power[iniparams$groupassgs == choices[1]] - power[iniparams$groupassgs == choices[1]] * proportion
