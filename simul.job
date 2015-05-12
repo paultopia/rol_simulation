@@ -1,0 +1,5 @@
+#!/bin/sh
+#$ -N gowdersim
+#$ -M paul-gowder@uiowa.edu
+#$ -m beas
+R CMD BATCH firstrun.R
