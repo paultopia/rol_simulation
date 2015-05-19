@@ -71,8 +71,8 @@ outer.wrapper <- function() {
   # modification: shift probability mass toward more unequal groups.
   unjustP <- sample(0:9, 1)  
   unjustG <- sample(0:9, 1)
-  goods.v <- warp(goods.v, unjustG, subgroups.dist, subgroups.num)
-  power.v <- warp(power.v, unjustP, subgroups.dist, subgroups.num)
+  goods.v <- warp(goods.v, unjustG, subgroups.dist)
+  power.v <- warp(power.v, unjustP, subgroups.dist)
   iniparams <- list(goods = goods.v, power = power.v, numgroups = subgroups.num, groupassgs = subgroups.dist, 
                     trust = trust.v, commitment = commitment.v, penalty = penalty.v, errorvar =  errorvar.v, 
                     decay = decay.v, power.decay = power.decay.v, shockvar = shockvar.v)
@@ -321,7 +321,7 @@ evaluate.masses <- function(iniparams, elite.act) {
     goodstemp <- iniparams$goods[101:1100]
     powertemp <- iniparams$power[101:1100]
     groupstemp <- iniparams$groupassgs[101:1100]
-    masspeeps <- rbind(goodstemp, powertemp, grouptemp)
+    masspeeps <- rbind(goodstemp, powertemp, groupstemp)
     indivcalc <- apply(masspeeps, 2, resistYN, inip = iniparams, eliteac = elite.act)    # resistyn will be 0 if no resist 1 if resist
     numresisters <- sum(indivcalc)
     totalpower <- sum[powertemp[indivcalc == 1]]
