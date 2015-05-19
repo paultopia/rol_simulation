@@ -339,10 +339,12 @@ resistYN <- function(citizen, inip, eliteac) {
   my.commitment <- (inip$commitment + (personal.trust.est * fair.feeling)) / 2
   my.commitment <- min(my.commitment, 1)
   bribes <- eliteac[-1]
-  mybribe <- bribes[citizen[3]] / length(inip$groupassgs[inip$groupassgs == citizen[3]])
+  mygroup <- as.numeric(citizen[3])
+  numinGr <- as.numeric(length(inip$groupassgs[inip$groupassgs == mygroup]))
+  mybribe <- as.numeric(bribes[mygroup]) / numinGr
   takebribe.util <- my.commitment * mybribe
-  bigsum <- vectorized.bribe.sigmasum(bribes, inipar)
-  unbribed.powersum <- generalized.nobribe.powersum(bribes, inipar)
+  bigsum <- vectorized.bribe.sigmasum(bribes, inip)
+  unbribed.powersum <- generalized.nobribe.powersum(bribes, inip)
   problose <- 1 - (personal.trust.est * unbribed.powersum) - (personal.commitment.est * personal.trust.est * bigsum)
   fight.util <- citizen[1] - (problose * inip$penalty)
   decision <- ifelse(takebribe.util > fight.util, 0, 1)
@@ -436,8 +438,8 @@ generalized.bribe.sigmasum <- function(bribes, inipar) {
 
 vectorized.bribe.sigmasum <- function(bribes, inipar){
   powers <- inipar$groupwise.powersum
-  powers <- powers[bribes != 0]
-  bribes <- bribes[bribes != 0]
+  powers <- as.numeric(powers[bribes != 0])
+  bribes <- as.numeric(bribes[bribes != 0])
   bigsum <- sum(powers/bribes)
   return(bigsum)
 }
@@ -494,5 +496,3 @@ testbatch <- function(runs) {
 }
 
 
-
-simulate.ch9(2000)
