@@ -479,6 +479,5 @@ testbatch <- function(runs) {
 }
 
 
-testbatch(5)
 
-simulate.ch9(1000)
+simulate.ch9(2000)
