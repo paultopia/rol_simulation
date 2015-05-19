@@ -324,7 +324,7 @@ evaluate.masses <- function(iniparams, elite.act) {
     masspeeps <- rbind(goodstemp, powertemp, groupstemp)
     indivcalc <- apply(masspeeps, 2, resistYN, inip = iniparams, eliteac = elite.act)    # resistyn will be 0 if no resist 1 if resist
     numresisters <- sum(indivcalc)
-    totalpower <- sum[powertemp[indivcalc == 1]]
+    totalpower <- sum(powertemp[indivcalc == 1])
     mass.act <- c(numresisters, totalpower)
     return(mass.act)
   }
