@@ -227,7 +227,7 @@ run.simul <- function(iniparams, bribe.fracmatrix) {
     attempts <- ifelse(elite.act[1] == 1, attempts, attempts + 1)
     mass.acts <- evaluate.masses(iniparams, elite.act)
     # mass.acts should be a two-item vector w/ number of resisters and total power of resisters.
-    round.outcome <- evaluate.outcome(elite.act, mass.act, iniparams$working.power) 
+    round.outcome <- evaluate.outcome(elite.act, mass.acts, iniparams$working.power) 
     # 1 if maintain, 0 if overthrow
     
     if (round.outcome == 0) break 
