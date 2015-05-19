@@ -338,7 +338,7 @@ resistYN <- function(citizen, inip, eliteac) {
   personal.commitment.est <- min(max(inip$commitment + rnorm(1, 0, inip$errorvar), 0) ,1)
   my.commitment <- (inip$commitment + (personal.trust.est * fair.feeling)) / 2
   my.commitment <- min(my.commitment, 1)
-  bribes <- elite.act[-1]
+  bribes <- eliteac[-1]
   mybribe <- bribes[citizen[3]] / length(inip$groupassgs[inip$groupassgs == citizen[3]])
   takebribe.util <- my.commitment * mybribe
   bigsum <- vectorized.bribe.sigmasum(bribes, inipar)
