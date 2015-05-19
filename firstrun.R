@@ -36,7 +36,7 @@ simulate.ch9 <- function(runs) {
       run.res <- c(i,outer.wrapper())
       results[i,] <- run.res
     }
-    increment.name <- sprintf("run%s_%s.csv", i, timeRR())
+    increment.name <- sprintf("run%s_%s.csv", j, timeRR())
     write.csv(results, increment.name, row.names=FALSE)  # does this handle column names right?
     # save.image()
     output.fnames[j] <- increment.name
@@ -54,7 +54,7 @@ timeRR <- function() {
   cleantime <- paste(poseR$mday, poseR$hour, poseR$min, poseR$sec, sep="")
   return(cleantime)
 }
-  
+
 
 # need to write something to put the files back together for analysis, but this is low priority
 
@@ -166,7 +166,8 @@ inner.wrapper <- function(iniparams) {
   groupwise.power.gini <- Gini(tapply(iniparams$power[101:1100], iniparams$groupassgs[iniparams$groupassgs > 0], mean))
   
   # I'm going to need this later and do not want to have to calculate it every round
-  bribe.fracmatrix <- bribe.fracmatrix.make(iniparams$numgroups)
+  budget <- 10000 - sum(iniparams$goods[1:100])
+  bribe.fracmatrix <- bribe.fracmatrix.make(iniparams$numgroups, budget)
   
   
   # now go actually run the simulation and get number of rounds
@@ -255,14 +256,13 @@ evaluate.elite <- function(iniparams, bribe.fracmatrix) {
 
 # GENERATE MATRIX OF ALL POSSIBLE BRIBES as fractions of budget
 # ACTUALLY RETURNS A DATA FRAME: is that ok?
-bribe.fracmatrix.make <- function(numgroups){
-  
+bribe.fracmatrix.make <- function(numgroups, budget){
   to.combine <- seq(from = 0, to = .95, by = .05)
-  
   args.topass <- rep("to.combine", numgroups)
   allbribes <- expand.grid(mget(args.topass))
   betterbribes <- allbribes[rowSums(allbribes) < 1, ]
   bestbribes <- betterbribes[rowSums(betterbribes) > 0,]
+  bestbribes <- bestbribes * budget
   return(bestbribes)
   # this is truly ugly and needs work: 
   # 1. maybe use do.call rather than this perverse args.topass stuff?
@@ -274,9 +274,7 @@ bribe.fracmatrix.make <- function(numgroups){
 # this function will multiple budget by fractions in the fracmatrix, then pass rowwise with applyto bribe.ufunction()
 # the latter will return a utility for each row, then this function will pick and return the max.
 
-maximize.bribe <- function(iniparams, trust.estimate, commitment.estimate, bribe.fracmatrix) {
-  budget <- 10000 - sum(iniparams$goods[1:100])
-  bribemat <- bribe.fracmatrix * budget
+maximize.bribe <- function(iniparams, trust.estimate, commitment.estimate, bribemat) {
   utilities <- apply(bribemat, 1, bribe.ufunction, inipar = iniparams, trust.est = trust.estimate, commitment.est = commitment.estimate)
   toputil <- max(utilities)
   topbribe <- bribemat[which.max(utilities),]
@@ -326,7 +324,7 @@ resistYN <- function(citizen, inip, eliteac) {
   bribes <- elite.act[-1]
   mybribe <- bribes[citizen[3]] / length(inip$groupassgs[inip$groupassgs == citizen[3]])
   takebribe.util <- my.commitment * mybribe
-  bigsum <- generalized.bribe.sigmasum(bribes, inipar)
+  bigsum <- vectorized.bribe.sigmasum(bribes, inipar)
   unbribed.powersum <- generalized.nobribe.powersum(bribes, inipar)
   problose <- 1 - (personal.trust.est * unbribed.powersum) - (personal.commitment.est * personal.trust.est * bigsum)
   fight.util <- citizen[1] - (problose * inip$penalty)
@@ -360,7 +358,7 @@ evaluate.outcome <- function(elite.act, mass.act, working.power) {
 update.trust <- function(iniparams, elite.act, mass.acts) {
   trustme <- iniparams$working.trust
   if(elite.act[1] == 1) {  
-    trustme <- trustme + trustme * iniparams$decay
+    trustme <- min((trustme + trustme * iniparams$decay) ,1)
   } else {
     trustme <- mass.acts[1]/1000
   }
@@ -400,7 +398,7 @@ decay.power <- function(iniparams) {
 # written to be applied to each row of possible bribes matrix, calculate utility and 
 # return that utility for a given possible bribe, described in said row
 bribe.ufunction <- function(bribes, inipar, trust.est, commitment.est) {
-  bigsum <- generalized.bribe.sigmasum(bribes, inipar)
+  bigsum <- vectorized.bribe.sigmasum(bribes, inipar)
   unbribed.powersum <- generalized.nobribe.powersum(bribes, inipar)
   utility <- 1 - (trust.est * unbribed.powersum)  - (trust.est * commitment.est * bigsum)
   return(utility)
@@ -416,6 +414,14 @@ generalized.bribe.sigmasum <- function(bribes, inipar) {
     }
   }
   bigsum <- sum(sigmasum)
+  return(bigsum)
+}
+
+vectorized.bribe.sigmasum <- function(bribes, inipar){
+  powers <- inipar$groupwise.powersum
+  powers <- powers[bribes != 0]
+  bribes <- bribes[bribes != 0]
+  bigsum <- sum(powers/bribes)
   return(bigsum)
 }
 
@@ -447,5 +453,30 @@ itsAlive <- function(filenames) {
   bigdf <- rbind.fill(biglist)
   return(bigdf)
 }
+
+testbatch <- function(runs) {
+  # library(compiler)
+  # enableJIT(3)
+  # not sure if that's a good idea...
+  library(ineq)  # for later
+  results <- data.frame(matrix(NA, nrow=runs, ncol=27))
+  colnames(results) <- c("run.id", "goods.mean.elite", "goods.mean.mass", "goods.sd.mass", "goods.gini.mass", 
+                           "goods.gini.all", "power.mean.elite", "power.mean.mass", "power.sd.mass", "power.gini.mass", 
+                           "power.gini.all", "num.subgroups", "subgroups.max.members", "subgroups.min.members", 
+                           "subgroup.mean.members", "groupwise.goods.gini", "groupwise.power.gini", 
+                           "trust", "commitment", "penalty", "errorvar", "decay", "power.decay", "shockvar", "rounds", 
+                           "attempts", "ending.trust")
+    for (i in 1:runs) {
+      run.res <- c(i,outer.wrapper())
+      results[i,] <- run.res
+    }
+    increment.name <- sprintf("testrun_%s.csv", timeRR())
+    write.csv(results, increment.name, row.names=FALSE)  # does this handle column names right?
+    # save.image() 
+  return(results) 
+}
+
+
+testbatch(5)
 
 simulate.ch9(1000)
