@@ -203,7 +203,9 @@ run.simul <- function(iniparams, bribe.fracmatrix) {
   attempts <- 0
   for (i in 1:1000) {
     num.rounds <- i
-    iniparams$groupwise.powersum <- tapply(iniparams$working.power, iniparams$groupassgs, sum)
+    massassgs <- iniparams$groupassgs[iniparams$groupassgs != 0]
+    masspower <- iniparams$working.power[iniparams$groupassgs != 0]
+    iniparams$groupwise.powersum <- tapply(masspower, massassgs, sum)
     elite.act <- evaluate.elite(iniparams, bribe.fracmatrix)
     # elite.act should be a vector with first item indicating first 1, 2, or 3 for status quo, overthrow w/o bribe, 
     # or overthrow w/ bribe, then remainder of items is one slot for each groups indicating bribe or not. 
@@ -257,7 +259,7 @@ evaluate.elite <- function(iniparams, bribe.fracmatrix) {
 # GENERATE MATRIX OF ALL POSSIBLE BRIBES as fractions of budget
 # ACTUALLY RETURNS A DATA FRAME: is that ok?
 bribe.fracmatrix.make <- function(numgroups, budget){
-  to.combine <- seq(from = 0, to = .95, by = .05)
+  to.combine <- seq(from = 0, to = .9, by = .1)
   args.topass <- rep("to.combine", numgroups)
   allbribes <- expand.grid(mget(args.topass))
   betterbribes <- allbribes[rowSums(allbribes) < 1, ]
